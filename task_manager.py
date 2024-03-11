@@ -14,7 +14,7 @@ customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("green")
 
 root = customtkinter.CTk()
-root.geometry("600x500")
+root.geometry("700x600")
 
 # Global variables to store the current user and username_password dictionary.
 # We need to be able to access them due to having widgets, entry boxes and 
@@ -241,6 +241,35 @@ def edit_task():
     else:
         message_label_edit_task.configure(text="Task Not Found")
 
+    remove_task()  # Call the remove_task function to remove the task if needed
+
+    with open("tasks.txt", "w") as task_file:
+        task_list_to_write = []
+        for t in task_list:
+            str_attrs = [
+                str(t['task_number']), 
+                t['username'],
+                t['title'],
+                t['description'],
+                t['due_date'].strftime(DATETIME_STRING_FORMAT),
+                t['assigned_date'].strftime(DATETIME_STRING_FORMAT),
+                "Yes" if t['completed'] else "No"
+            ]
+            task_list_to_write.append(";".join(str_attrs))
+        task_file.write("\n".join(task_list_to_write))
+
+def remove_task():
+    task_choice = int(edit_task_choice.get())
+
+    for index, t in enumerate(task_list):
+        if int(t['task_number']) == task_choice:
+            del task_list[index]  # Remove the task from the task list
+            message_label_edit_task.configure(text="Task removed successfully")
+            break
+    else:
+        message_label_edit_task.configure(text="Task Not Found")
+
+    # Rewrite the tasks.txt file with updated task list
     with open("tasks.txt", "w") as task_file:
         task_list_to_write = []
         for t in task_list:
@@ -366,6 +395,33 @@ def display_statistics():
     else: 
         message_label_stat.configure(text="Only Admin can view statistics. Sorry!")
 
+def display_users():
+    users_textbox.delete(1.0, customtkinter.END)  # Clear the text box
+    for username in username_password:
+        users_textbox.insert(customtkinter.END, f"{username}\n")  # Display each user
+
+def remove_user():
+    user_to_remove = remove_user_choice.get()
+    if user_to_remove in username_password:
+        # Remove the user from the dictionary
+        del username_password[user_to_remove]
+        admin_message_label.configure(text=f"User '{user_to_remove}' removed successfully")
+
+        # Read the contents of the user.txt file
+        with open("user.txt", "r") as user_file:
+            lines = user_file.readlines()
+
+        # Remove the user from the lines
+        updated_lines = [line.strip() for line in lines if line.strip() and not line.startswith(f"{user_to_remove};")]
+
+        # Write the updated contents back to the user.txt file
+        with open("user.txt", "w") as user_file:
+            user_file.write('\n'.join(updated_lines))
+    else:
+        admin_message_label.configure(text="User does not exist")
+
+
+
 
 # Create tasks.txt if it doesn't exist
 if not os.path.exists("tasks.txt"):
@@ -444,6 +500,15 @@ def show_statistics_frame():
     view_statistics_frame.pack(pady=20, padx=60, fill="both", expand=True)
     display_statistics()
 
+def show_admin_edit_user_frame():
+    if current_user == 'admin':
+        # Hide the menu frame and show the reports frame.
+        menu_frame.pack_forget()
+        view_admin_edit_user_frame.pack(pady=20, padx=60, fill="both", expand=True)
+        display_users()
+    else: 
+        message_label_menu.configure(text="Admin Only!!")
+
 def logout_and_reset():
     # Hide all frames.
     menu_frame.pack_forget()
@@ -471,6 +536,7 @@ def logout_and_reset():
     view_statistics_box.delete(0.0, 'end')  # Clear view statistics box.
     if edit_task_choice:
         edit_task_choice.delete(0, 'end')  # Clear edit task choice entry only if filled.
+    message_label_menu.configure(text="") # Clear menu message label on logout.
     
 
 
@@ -502,8 +568,8 @@ menu_frame = customtkinter.CTkFrame(master=root)
 label = customtkinter.CTkLabel(master=menu_frame, text="Main Menu", font=("Roboto", 24))
 label.pack(pady=12, padx=10)
 
-menu_message_label = customtkinter.CTkLabel(master=menu_frame, text="Please Choose from the following options:", font=("Roboto", 12))
-menu_message_label.pack(pady=8, padx=10)
+menu_label = customtkinter.CTkLabel(master=menu_frame, text="Please Choose from the following options:", font=("Roboto", 12))
+menu_label.pack(pady=8, padx=10)
 
 reg_user_button = customtkinter.CTkButton(master=menu_frame, text="Register A User", command=show_reg_user_frame)
 reg_user_button.pack(pady=8, padx=10)
@@ -522,6 +588,12 @@ generate_reports_button.pack(pady=8, padx=10)
 
 display_statistics_button = customtkinter.CTkButton(master=menu_frame, text="View Statistics", command=show_statistics_frame)
 display_statistics_button.pack(pady=8, padx=10)
+
+admin_user_functions_button = customtkinter.CTkButton(master=menu_frame, text="View/Edit Users", command=show_admin_edit_user_frame)
+admin_user_functions_button.pack(pady=8, padx=10)
+
+message_label_menu = customtkinter.CTkLabel(master=menu_frame, text="", font=("Roboto", 12))
+message_label_menu.pack(pady=12, padx=10)
 
 logout_button = customtkinter.CTkButton(master=menu_frame, text="Logout", command=logout_and_reset)
 logout_button.pack(pady=15, padx=10)
@@ -614,7 +686,7 @@ view_my_tasks_frame = customtkinter.CTkFrame(master=root)
 my_tasks_box = customtkinter.CTkTextbox(master=view_my_tasks_frame)
 my_tasks_box.pack(fill="both", expand=True)
 
-edit_task_choice = customtkinter.CTkEntry(master=view_my_tasks_frame, placeholder_text=" -Task num to edit- ")
+edit_task_choice = customtkinter.CTkEntry(master=view_my_tasks_frame, justify="center", placeholder_text="-Task num to edit-")
 edit_task_choice.pack(pady=5, padx=5)
 # Bind the validate function to the edit task choice entry box.
 edit_task_choice.bind("<KeyRelease>", lambda event: validate_task_number(current_user))
@@ -649,6 +721,9 @@ label = customtkinter.CTkLabel(master=edit_task_frame, text="Change Task Due Dat
 label.pack(padx=5)
 change_date = customtkinter.CTkEntry(master=edit_task_frame)
 change_date.pack(pady=5, padx=5)
+
+remove_task_button = customtkinter.CTkButton(master=edit_task_frame, text="Remove Task", command=remove_task)
+remove_task_button.pack(pady=5, padx=5)
 
 message_label_edit_task = customtkinter.CTkLabel(master=edit_task_frame, text="", font=("Roboto", 12))
 message_label_edit_task.pack(pady=5, padx=5)
@@ -686,6 +761,29 @@ message_label_stat.pack(pady=5, padx=5)
 
 return_to_menu_button = customtkinter.CTkButton(master=view_statistics_frame, text="Return to Menu", 
                                                 command=lambda: return_to_menu(view_statistics_frame))
+return_to_menu_button.pack(pady=15, padx=10)
+
+
+# View Edit Users Widgets.
+view_admin_edit_user_frame = customtkinter.CTkFrame(master=root)
+
+users_textbox_label = customtkinter.CTkLabel(master=view_admin_edit_user_frame, text="Current Users:", font=("Roboto", 10))
+users_textbox_label.pack(pady=5, padx=5)
+
+users_textbox = customtkinter.CTkTextbox(master=view_admin_edit_user_frame)
+users_textbox.pack(fill="both", expand=True)
+
+remove_user_choice = customtkinter.CTkEntry(master=view_admin_edit_user_frame, justify="center", placeholder_text="User to remove")
+remove_user_choice.pack(pady=5, padx=5)
+
+remove_user_button = customtkinter.CTkButton(master=view_admin_edit_user_frame, text="Remove User", command=remove_user)
+remove_user_button.pack(pady=15, padx=10)
+
+admin_message_label = customtkinter.CTkLabel(master=view_admin_edit_user_frame, text="", font=("Roboto", 12))
+admin_message_label.pack(pady=5, padx=5)
+
+return_to_menu_button = customtkinter.CTkButton(master=view_admin_edit_user_frame, text="Return to Menu", 
+                                                command=lambda: return_to_menu(view_admin_edit_user_frame))
 return_to_menu_button.pack(pady=15, padx=10)
 
 root.mainloop()
