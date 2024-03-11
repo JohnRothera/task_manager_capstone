@@ -241,6 +241,35 @@ def edit_task():
     else:
         message_label_edit_task.configure(text="Task Not Found")
 
+    remove_task()  # Call the remove_task function to remove the task if needed
+
+    with open("tasks.txt", "w") as task_file:
+        task_list_to_write = []
+        for t in task_list:
+            str_attrs = [
+                str(t['task_number']), 
+                t['username'],
+                t['title'],
+                t['description'],
+                t['due_date'].strftime(DATETIME_STRING_FORMAT),
+                t['assigned_date'].strftime(DATETIME_STRING_FORMAT),
+                "Yes" if t['completed'] else "No"
+            ]
+            task_list_to_write.append(";".join(str_attrs))
+        task_file.write("\n".join(task_list_to_write))
+
+def remove_task():
+    task_choice = int(edit_task_choice.get())
+
+    for index, t in enumerate(task_list):
+        if int(t['task_number']) == task_choice:
+            del task_list[index]  # Remove the task from the task list
+            message_label_edit_task.configure(text="Task removed successfully")
+            break
+    else:
+        message_label_edit_task.configure(text="Task Not Found")
+
+    # Rewrite the tasks.txt file with updated task list
     with open("tasks.txt", "w") as task_file:
         task_list_to_write = []
         for t in task_list:
@@ -649,6 +678,9 @@ label = customtkinter.CTkLabel(master=edit_task_frame, text="Change Task Due Dat
 label.pack(padx=5)
 change_date = customtkinter.CTkEntry(master=edit_task_frame)
 change_date.pack(pady=5, padx=5)
+
+remove_task_button = customtkinter.CTkButton(master=edit_task_frame, text="Remove Task", command=remove_task)
+remove_task_button.pack(pady=5, padx=5)
 
 message_label_edit_task = customtkinter.CTkLabel(master=edit_task_frame, text="", font=("Roboto", 12))
 message_label_edit_task.pack(pady=5, padx=5)
