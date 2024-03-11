@@ -1,1 +1,2 @@
 1;john;Build a task manager.;refactor functions, build a GUI.;2024-03-15;2024-03-11;No
+2;bobby;modify program;create a new branch in git, then modify.;2024-03-12;2024-03-11;No
